@@ -16,8 +16,12 @@ Windows 游戏实时翻译工具，使用你自己的 OpenAI 兼容 API。
 
 ## 获取和运行
 
-本仓库仅随附一份完整成品：[RikaTranslator-0.7.4-win-x64](releases/RikaTranslator-0.7.4-win-x64)。
-下载或克隆仓库后，保留该目录的全部运行文件，双击其中的 `RikaTranslator.exe`。
+从 [Releases](https://github.com/Fudude-Rika/RikaTranslator/releases/latest) 下载完整程序包：
+[RikaTranslator-0.7.4-win-x64.zip](https://github.com/Fudude-Rika/RikaTranslator/releases/download/v0.7.4/RikaTranslator-0.7.4-win-x64.zip)。
+解压后进入 `RikaTranslator-0.7.4-win-x64`，保留全部运行文件，双击 `RikaTranslator.exe`。
+同页提供 `SHA256SUMS.txt`，用于校验下载的程序包。
+
+仓库中也保留同版本的[完整成品目录](releases/RikaTranslator-0.7.4-win-x64)。
 普通用户无需编译源码，不需要安装 .NET SDK、Python 或 Node.js。
 
 需要 Microsoft Edge WebView2 Runtime；缺少时从[微软官方页面](https://developer.microsoft.com/microsoft-edge/webview2/)安装。
