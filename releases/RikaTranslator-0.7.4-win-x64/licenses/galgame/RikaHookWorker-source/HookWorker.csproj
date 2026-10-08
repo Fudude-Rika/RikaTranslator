@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>RikaHookWorker</AssemblyName>
+    <Version>0.7.3</Version>
+    <ApplicationIcon Condition="Exists('../../wwwroot/assets/rika.ico')">../../wwwroot/assets/rika.ico</ApplicationIcon>
+  </PropertyGroup>
+</Project>

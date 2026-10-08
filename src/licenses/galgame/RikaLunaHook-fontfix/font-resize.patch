@@ -1,0 +1,390 @@
+--- a/src/NativeImpl/LunaHook/LunaHook/hijackfuns.cc
++++ b/src/NativeImpl/LunaHook/LunaHook/hijackfuns.cc
+@@ -1,4 +1,5 @@
+-
++// Rika Translator font resizing fix, 2026-10-08.
++// Derived from LunaTranslator v12.0.1; retain the upstream GPL license.
+ #pragma intrinsic(_ReturnAddress)
+ 
+ // Disable only for debugging purpose
+@@ -186,8 +187,7 @@
+     std::wstring s = maybe_disabled_fontFamily();
+     if (!s.empty())
+     {
+-      lplf->lfFaceName[s.size()] = 0;
+-      memcpy(lplf->lfFaceName, s.c_str(), s.size());
++      wcsncpy_s(lplf->lfFaceName, LF_FACESIZE, s.c_str(), _TRUNCATE);
+     }
+   }
+ 
+@@ -195,16 +195,34 @@
+ 
+   class LogFontManager
+   {
+-    typedef std::pair<HFONT, LOGFONTW> font_pair;
+-    std::list<font_pair> fonts_;
+-
++    struct FontEntry
++    {
++      HFONT handle;
++      LOGFONTW actual;
++      LOGFONTW requested;
++      LOGFONTW baseline;
++    };
++    std::list<FontEntry> fonts_;
++    std::mutex mutex_;
++
++    void discardStale()
++    {
++      for (auto it = fonts_.begin(); it != fonts_.end();)
++      {
++        LOGFONTW actual = {};
++        if (::GetObjectW(it->handle, sizeof(actual), &actual) != sizeof(actual) ||
++            !eq(actual, it->actual))
++          it = fonts_.erase(it);
++        else
++          ++it;
++      }
++    }
++
++  public:
+     static bool eq(const LOGFONTW &x, const LOGFONTW &y);
+-
+-  public:
+-    HFONT get(const LOGFONTW &lf) const;
+-    void add(HFONT hf, const LOGFONTW &lf);
+-    void remove(HFONT hf);
+-    void remove(const LOGFONTW &lf);
++    LOGFONTW baseline(HFONT handle, const LOGFONTW &actual);
++    HFONT getOrCreate(const LOGFONTW &requested, const LOGFONTW &baseline);
++    void remember(HFONT handle, const LOGFONTW &requested, const LOGFONTW &baseline);
+   };
+ 
+   bool LogFontManager::eq(const LOGFONTW &x, const LOGFONTW &y)
+@@ -212,59 +230,69 @@
+     return ::wcscmp(x.lfFaceName, y.lfFaceName) == 0 && ::memcmp(&x, &y, sizeof(x) - sizeof(x.lfFaceName)) == 0;
+   }
+ 
+-  void LogFontManager::add(HFONT hf, const LOGFONTW &lf)
+-  {
+-    fonts_.push_back(std::make_pair(hf, lf));
+-  }
+-
+-  void LogFontManager::remove(HFONT hf)
+-  {
+-    auto _ = std::remove_if(fonts_.begin(), fonts_.end(), [&hf](const font_pair &it)
+-                            { return it.first == hf; });
+-  }
+-
+-  void LogFontManager::remove(const LOGFONTW &lf)
+-  {
+-    auto _ = std::remove_if(fonts_.begin(), fonts_.end(), [&lf](const font_pair &it)
+-                            { return eq(it.second, lf); });
+-  }
+-
+-  HFONT LogFontManager::get(const LOGFONTW &lf) const
+-  {
+-    for (const font_pair &it : fonts_)
+-      if (eq(it.second, lf))
+-        return it.first;
+-    return nullptr;
+-  }
++  LOGFONTW LogFontManager::baseline(HFONT handle, const LOGFONTW &actual)
++  {
++    std::lock_guard<std::mutex> lock(mutex_);
++    for (auto it = fonts_.begin(); it != fonts_.end(); ++it)
++      if (it->handle == handle)
++      {
++        // Games may delete our replacement font when resetting their renderer.
++        // Do not treat a stale/reused GDI handle as a replacement font.
++        if (eq(it->actual, actual))
++          return it->baseline;
++        fonts_.erase(it);
++        break;
++      }
++    return actual;
++  }
++
++  HFONT LogFontManager::getOrCreate(const LOGFONTW &requested, const LOGFONTW &baseline)
++  {
++    std::lock_guard<std::mutex> lock(mutex_);
++    discardStale();
++    for (const auto &entry : fonts_)
++    {
++      // Baseline is part of the key: distinct original fonts can round to
++      // the same scaled height, but must not share a different baseline.
++      if (eq(entry.requested, requested) && eq(entry.baseline, baseline))
++        return entry.handle;
++    }
++    HFONT handle = Hijack::oldCreateFontIndirectW(&requested);
++    LOGFONTW actual = {};
++    if (handle && ::GetObjectW(handle, sizeof(actual), &actual) == sizeof(actual))
++      fonts_.push_back({handle, actual, requested, baseline});
++    return handle;
++  }
++
++  void LogFontManager::remember(HFONT handle, const LOGFONTW &requested, const LOGFONTW &baseline)
++  {
++    LOGFONTW actual = {};
++    if (!handle || ::GetObjectW(handle, sizeof(actual), &actual) != sizeof(actual))
++      return;
++    std::lock_guard<std::mutex> lock(mutex_);
++    discardStale();
++    fonts_.remove_if([handle](const FontEntry &entry) { return entry.handle == handle; });
++    fonts_.push_back({handle, actual, requested, baseline});
++  }
++
++  LogFontManager fontManager;
+ 
+   // GDI font switcher
+ 
+   class DCFontSwitcher
+   {
+-    static LogFontManager fonts_;
+-
+     HDC hdc_;
+-    HFONT oldFont_,
+-        newFont_;
+-    std::wstring newfontname;
+ 
+   public:
+     explicit DCFontSwitcher(HDC hdc); // pass 0 to disable this class
+     ~DCFontSwitcher();
+   };
+ 
+-  LogFontManager DCFontSwitcher::fonts_;
+-
+   DCFontSwitcher::~DCFontSwitcher()
+   {
+-    // No idea why selecting old font will crash Mogeko Castle
+-    // if (oldFont_ && oldFont_ != HGDI_ERROR)
+-    //  ::SelectObject(hdc_, oldFont_);
+-
+-    // Never delete new font but cache them
+-    // This could result in bad font after game is reset and deleted my font
+-    // if (newFont_)
+-    //  ::DeleteObject(newFont_);
++    // Keep the upstream persistent selection for Mogeko Castle compatibility.
++    // Baseline tracking makes repeated measure/draw calls idempotent without
++    // restoring a potentially deleted font or deleting a font still in use.
+   }
+   bool isFontCustomized()
+   {
+@@ -275,7 +303,7 @@
+     return commonsharedmem->FontSizeRelative != 1;
+   }
+   DCFontSwitcher::DCFontSwitcher(HDC hdc)
+-      : hdc_(hdc), oldFont_(nullptr), newFont_(nullptr), newfontname(L"")
++      : hdc_(hdc)
+   {
+     if (!hdc_)
+       return;
+@@ -287,35 +315,22 @@
+   if (!s->deviceContextFontEnabled || !s->isFontCustomized())
+     return;
+ */
+-    TEXTMETRICW tm;
+-    if (!::GetTextMetricsW(hdc, &tm))
++    auto currentFont = (HFONT)::GetCurrentObject(hdc_, OBJ_FONT);
++    LOGFONTW current = {};
++    if (!currentFont || ::GetObjectW(currentFont, sizeof(current), &current) != sizeof(current))
+       return;
+ 
+-    LOGFONTW lf = {};
+-    lf.lfHeight = tm.tmHeight;
+-    lf.lfWeight = tm.tmWeight;
+-    lf.lfItalic = tm.tmItalic;
+-    lf.lfUnderline = tm.tmUnderlined;
+-    lf.lfStrikeOut = tm.tmStruckOut;
+-    lf.lfCharSet = tm.tmCharSet;
+-    lf.lfPitchAndFamily = tm.tmPitchAndFamily;
+-
++    // The selected font may be the result of the previous measure/draw call.
++    // Scale its original LOGFONT, never the already scaled TEXTMETRIC height.
++    auto baseline = fontManager.baseline(currentFont, current);
++    LOGFONTW lf = baseline;
+     customizeLogFontW(&lf);
+     ScaleFont(&lf);
+-    if (std::wstring(maybe_disabled_fontFamily()).empty())
+-      ::GetTextFaceW(hdc_, LF_FACESIZE, lf.lfFaceName);
+-    else
+-    {
+-      wcscpy(lf.lfFaceName, maybe_disabled_fontFamily());
+-    }
+-    newFont_ = fonts_.get(lf);
+-    if ((!newFont_) || (newfontname != std::wstring(maybe_disabled_fontFamily())))
+-    {
+-      newFont_ = Hijack::oldCreateFontIndirectW(&lf);
+-      fonts_.add(newFont_, lf);
+-      newfontname = std::wstring(maybe_disabled_fontFamily());
+-    }
+-    oldFont_ = (HFONT)SelectObject(hdc_, newFont_);
++    if (LogFontManager::eq(lf, current))
++      return;
++    auto newFont = fontManager.getOrCreate(lf, baseline);
++    if (newFont)
++      ::SelectObject(hdc_, newFont);
+   }
+ 
+ } // unnamed namespace
+@@ -325,6 +340,20 @@
+ // http://forums.codeguru.com/showthread.php?500522-Need-clarification-about-CreateFontIndirect
+ // The font creation functions will never fail
+ HFONT WINAPI Hijack::newCreateFontIndirectA(const LOGFONTA *lplf)
++{
++  if (lplf && (isFontCustomized() || isFontSizeCustomized()))
++  {
++    LOGFONTW lf = {};
++    memcpy(&lf, lplf, offsetof(LOGFONTA, lfFaceName));
++    const auto length = strnlen(lplf->lfFaceName, LF_FACESIZE);
++    oldMultiByteToWideChar(CP_ACP, 0, lplf->lfFaceName, (int)length,
++                          lf.lfFaceName, LF_FACESIZE - 1);
++    return newCreateFontIndirectW(&lf);
++  }
++  return oldCreateFontIndirectA(lplf);
++}
++
++HFONT WINAPI Hijack::newCreateFontIndirectW(const LOGFONTW *lplf)
+ {
+ 
+   // DOUT("width:" << lplf->lfWidth << ", height:" << lplf->lfHeight << ", weight:" << lplf->lfWeight);
+@@ -332,50 +361,15 @@
+   // auto s = p->settings();
+   if (lplf && (isFontCustomized() || isFontSizeCustomized()))
+   {
+-    union
+-    {
+-      LOGFONTA a;
+-      LOGFONTW w;
+-    } lf = {*lplf}; // only initialize the first member of LOGFONTA
+-    ScaleFont(&lf.a);
+-    bool usewapi = false;
+-    if (isFontCustomized())
+-    {
+-      std::wstring fontFamily = maybe_disabled_fontFamily();
+-      customizeLogFontA(&lf.a);
+-      if (!fontFamily.empty())
+-      {
+-        if (all_ascii(fontFamily))
+-          ::strcpy(lf.a.lfFaceName, WideStringToString(fontFamily, CP_ACP).c_str());
+-        else
+-        {
+-          lf.w.lfFaceName[fontFamily.size()] = 0;
+-          memcpy(lf.w.lfFaceName, fontFamily.c_str(), fontFamily.size());
+-          usewapi = true;
+-        }
+-      }
+-    }
+-    if (usewapi)
+-      oldCreateFontIndirectW(&lf.w);
+-    return oldCreateFontIndirectA(&lf.a);
+-  }
+-  //}
+-  return oldCreateFontIndirectA(lplf);
+-}
+-
+-HFONT WINAPI Hijack::newCreateFontIndirectW(const LOGFONTW *lplf)
+-{
+-
+-  // DOUT("width:" << lplf->lfWidth << ", height:" << lplf->lfHeight << ", weight:" << lplf->lfWeight);
+-  // if (auto p = HijackHelper::instance()) {
+-  // auto s = p->settings();
+-  if (lplf && (isFontCustomized() || isFontSizeCustomized()))
+-  {
+     LOGFONTW lf(*lplf);
+     ScaleFont(&lf);
+     if (isFontCustomized())
+       customizeLogFontW(&lf);
+-    return oldCreateFontIndirectW(&lf);
++    auto handle = oldCreateFontIndirectW(&lf);
++    // A creation hook can already apply the ratio. Drawing hooks must still
++    // recover the unmodified LOGFONT rather than applying the ratio twice.
++    fontManager.remember(handle, lf, *lplf);
++    return handle;
+   }
+   // }
+   return oldCreateFontIndirectW(lplf);
+@@ -384,65 +378,30 @@
+ #define CREATE_FONT_ARGS nHeight, nWidth, nEscapement, nOrientation, fnWeight, fdwItalic, fdwUnderline, fdwStrikeOut, fdwCharSet, fdwOutputPrecision, fdwClipPrecision, fdwQuality, fdwPitchAndFamily, lpszFace
+ HFONT WINAPI Hijack::newCreateFontA(int nHeight, int nWidth, int nEscapement, int nOrientation, int fnWeight, DWORD fdwItalic, DWORD fdwUnderline, DWORD fdwStrikeOut, DWORD fdwCharSet, DWORD fdwOutputPrecision, DWORD fdwClipPrecision, DWORD fdwQuality, DWORD fdwPitchAndFamily, LPCSTR lpszFace)
+ {
+-  ScaleFont(nHeight, nWidth);
+-  if (isFontCustomized())
+-  {
+-    if (commonsharedmem->fontCharSetEnabled)
+-    {
+-      auto charSet = commonsharedmem->fontCharSet;
+-      if (!charSet)
+-        charSet = systemCharSet();
+-      if (charSet)
+-        fdwCharSet = charSet;
+-    }
+-    /*
+-    if (s->fontWeight)
+-      fnWeight = s->fontWeight;
+-    if (s->isFontScaled()) {
+-      nWidth *= s->fontScale;
+-      nHeight *= s->fontScale;
+-    }
+-    */
+-    std::wstring fontFamily = maybe_disabled_fontFamily();
+-    if (!fontFamily.empty())
+-    {
+-      if (all_ascii(fontFamily))
+-      {
+-        lpszFace = WideStringToString(fontFamily, CP_ACP).c_str();
+-        return oldCreateFontA(CREATE_FONT_ARGS);
+-      }
+-      else
+-      {
+-        auto lpszFace = (LPCWSTR)fontFamily.c_str();
+-        return oldCreateFontW(CREATE_FONT_ARGS);
+-      }
+-    }
++  if (isFontCustomized() || isFontSizeCustomized())
++  {
++    LOGFONTW lf = {nHeight, nWidth, nEscapement, nOrientation, fnWeight,
++                  (BYTE)fdwItalic, (BYTE)fdwUnderline, (BYTE)fdwStrikeOut,
++                  (BYTE)fdwCharSet, (BYTE)fdwOutputPrecision, (BYTE)fdwClipPrecision,
++                  (BYTE)fdwQuality, (BYTE)fdwPitchAndFamily, {}};
++    if (lpszFace)
++      oldMultiByteToWideChar(CP_ACP, 0, lpszFace, -1, lf.lfFaceName, LF_FACESIZE);
++    return newCreateFontIndirectW(&lf);
+   }
+   return oldCreateFontA(CREATE_FONT_ARGS);
+ }
+ 
+ HFONT WINAPI Hijack::newCreateFontW(int nHeight, int nWidth, int nEscapement, int nOrientation, int fnWeight, DWORD fdwItalic, DWORD fdwUnderline, DWORD fdwStrikeOut, DWORD fdwCharSet, DWORD fdwOutputPrecision, DWORD fdwClipPrecision, DWORD fdwQuality, DWORD fdwPitchAndFamily, LPCWSTR lpszFace)
+ {
+-  ScaleFont(nHeight, nWidth);
+-  if (isFontCustomized())
+-  {
+-    if (commonsharedmem->fontCharSetEnabled)
+-    {
+-      auto charSet = commonsharedmem->fontCharSet;
+-      if (!charSet)
+-        charSet = systemCharSet();
+-      if (charSet)
+-        fdwCharSet = charSet;
+-    }
+-    /*
+-    if (s->fontWeight)
+-      fnWeight = s->fontWeight;
+-    if (s->isFontScaled()) {
+-      nWidth *= s->fontScale;
+-      nHeight *= s->fontScale;
+-    }*/
+-    if (!std::wstring(maybe_disabled_fontFamily()).empty())
+-      lpszFace = (LPCWSTR)commonsharedmem;
++  if (isFontCustomized() || isFontSizeCustomized())
++  {
++    LOGFONTW lf = {nHeight, nWidth, nEscapement, nOrientation, fnWeight,
++                  (BYTE)fdwItalic, (BYTE)fdwUnderline, (BYTE)fdwStrikeOut,
++                  (BYTE)fdwCharSet, (BYTE)fdwOutputPrecision, (BYTE)fdwClipPrecision,
++                  (BYTE)fdwQuality, (BYTE)fdwPitchAndFamily, {}};
++    if (lpszFace)
++      wcsncpy_s(lf.lfFaceName, LF_FACESIZE, lpszFace, _TRUNCATE);
++    return newCreateFontIndirectW(&lf);
+   }
+   return oldCreateFontW(CREATE_FONT_ARGS);
+ }

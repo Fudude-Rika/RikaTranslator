@@ -1,0 +1,48 @@
+{
+  "revision": "12.0.1-rika-fontfix1",
+  "compiler": "MSVC 19.44.35229",
+  "sdk": "10.0.26100.0",
+  "configuration": "Release / MT / WIN10ABOVE / USE_VC_LTL=OFF",
+  "components": [
+    {
+      "name": "LunaHook32.dll",
+      "size": 1995264,
+      "sha256": "e6a05e82544379854412491e227d59df65f3734f87c2d99e53623cf3494f8316",
+      "revision": "12.0.1-rika-fontfix1",
+      "architecture": "x86",
+      "dependencies": [
+        "SHLWAPI.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "SHELL32.dll",
+        "ADVAPI32.dll",
+        "VERSION.dll",
+        "HTTPAPI.dll",
+        "WS2_32.dll"
+      ]
+    },
+    {
+      "name": "LunaHook64.dll",
+      "size": 2645504,
+      "sha256": "c4b9bc9b0c0917e29056958d1843d68e30b2ab9d45f8014e413d8873ce5c525d",
+      "revision": "12.0.1-rika-fontfix1",
+      "architecture": "x64",
+      "dependencies": [
+        "SHLWAPI.dll",
+        "KERNEL32.dll",
+        "USER32.dll",
+        "GDI32.dll",
+        "SHELL32.dll",
+        "ADVAPI32.dll",
+        "VERSION.dll",
+        "HTTPAPI.dll",
+        "WS2_32.dll"
+      ]
+    }
+  ],
+  "minhookVersion": "v1.3.4",
+  "minhookArchiveSha256": "172708123daa0c98d20d3a980b16a50be14af243dc95dee6f79c24193ad010e4",
+  "fontSourceSha256": "ceaac1c4a03285d317efaa9d6399100a47bac1d869da3bcd8c4a17febd76e9f3",
+  "nativeManifestSha256": "f087d223455e68501e0ec82e59a92ef70fd7911a6448fc5a0e5990895369396c"
+}

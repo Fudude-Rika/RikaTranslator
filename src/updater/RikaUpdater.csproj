@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.7.0</Version>
+    <AssemblyName>RikaUpdater</AssemblyName>
+    <Product>Rika Translator 本地更新</Product>
+    <ApplicationIcon>..\wwwroot\assets\rika.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Updates\UpdatePackage.cs" Link="UpdatePackage.cs" />
+    <Compile Include="..\Updates\UpdateInstaller.cs" Link="UpdateInstaller.cs" />
+  </ItemGroup>
+</Project>

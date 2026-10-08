@@ -1,0 +1,15 @@
+{
+  "patchVersion": 1,
+  "date": "2026-10-08",
+  "upstreamTag": "v12.0.1",
+  "upstreamSourceSha256": "72dce61593fbcd00233caaee329e68dfe36d226120f7faf207c0f6da93b3e024",
+  "file": "src/NativeImpl/LunaHook/LunaHook/hijackfuns.cc",
+  "originalFileSha256": "9d9733b0d03a801c206797fe41eb1695a074bdbd701845716b14281e2d10cec0",
+  "modifiedFileSha256": "ceaac1c4a03285d317efaa9d6399100a47bac1d869da3bcd8c4a17febd76e9f3",
+  "patchSha256": "283fd898d0e80c2d11a705ce1c05a9a9faf04c2e1911655a69e2d4e975d94cce",
+  "license": "GPL-3.0 (retain upstream license)",
+  "status": "native-built",
+  "runtimeNativeManifestSha256": "f087d223455e68501e0ec82e59a92ef70fd7911a6448fc5a0e5990895369396c",
+  "nativeRevision": "12.0.1-rika-fontfix1",
+  "nativeBuild": "native-build.json"
+}

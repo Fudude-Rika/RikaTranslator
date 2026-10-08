@@ -1,0 +1,24 @@
+# Local data and generated build files
+**/data/
+**/bin/
+**/obj/
+**/.vs/
+**/__pycache__/
+**/node_modules/
+**/validation/
+**/artifacts/
+**/toolchain/
+src/dist/
+out/
+.env
+.env.*
+*.user
+*.tmp
+*.log
+*.pdb
+*.bak
+**/settings.json
+**/settings.json.*
+**/*test-results*.json
+**/测试记录.md
+**/项目交接文档.md

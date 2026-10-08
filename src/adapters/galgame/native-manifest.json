@@ -1,0 +1,29 @@
+[
+  {
+    "name": "LunaHook32.dll",
+    "size": 1995264,
+    "sha256": "e6a05e82544379854412491e227d59df65f3734f87c2d99e53623cf3494f8316",
+    "revision": "12.0.1-rika-fontfix1"
+  },
+  {
+    "name": "LunaHook64.dll",
+    "size": 2645504,
+    "sha256": "c4b9bc9b0c0917e29056958d1843d68e30b2ab9d45f8014e413d8873ce5c525d",
+    "revision": "12.0.1-rika-fontfix1"
+  },
+  {
+    "name": "LunaHost64.dll",
+    "size": 259896,
+    "sha256": "5a7d29c5d160a524750d4e35d55ad36875983fa600bf0179354da98c834d6320"
+  },
+  {
+    "name": "LunaSubprocess32.exe",
+    "size": 464192,
+    "sha256": "9d487219e41eefef35322f1b5275efd99b8d56891491ccd4bcdb5572762e3598"
+  },
+  {
+    "name": "LunaSubprocess64.exe",
+    "size": 428352,
+    "sha256": "0fddb278f96696ad9bda8677ae86b5f65c84e188de75049f7cb75c018b22eb16"
+  }
+]

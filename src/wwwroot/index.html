@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Rika Translator（梨花翻译工具）</title>
+  <link rel="icon" type="image/x-icon" href="/assets/rika.ico">
+  <link rel="stylesheet" href="/styles.css?v=0.7.4">
+  <script src="/hook-ui.js?v=0.7.4" defer></script>
+  <script src="/app.js?v=0.7.4" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="主导航">
+      <a class="brand" href="#library" aria-label="Rika Translator 梨花翻译工具首页"><img class="brand-mark" src="/assets/rika-avatar.png" alt="" width="44" height="44"><span><strong>Rika Translator</strong><small>梨花翻译工具</small></span></a>
+      <div class="nav-caption">工作空间</div>
+      <nav id="navigation"></nav>
+      <div class="sidebar-bottom">
+        <a href="#settings" class="nav-link" data-nav="settings"><span data-icon="settings"></span><span>设置</span></a>
+        <div class="local-status"><span class="status-dot"></span><span>本机运行</span><small id="version">v0.7.4</small></div>
+      </div>
+    </aside>
+    <button id="sidebar-backdrop" class="sidebar-backdrop" aria-label="关闭导航"></button>
+    <div class="workspace">
+      <header class="topbar"><button class="icon-button mobile-menu" data-action="toggle-nav" aria-label="展开导航"><span data-icon="menu"></span></button><div class="breadcrumb" id="breadcrumb">工作空间 <span>/</span> 游戏库</div><div class="topbar-right"><span class="topbar-local"><span class="status-dot"></span>数据保存在本机</span><button class="icon-button" data-action="theme-cycle" title="切换主题" aria-label="切换主题"><span data-icon="sun"></span></button></div></header>
+      <main id="main" tabindex="-1"><div class="page-loading"><span class="spinner"></span><p>正在打开工作空间…</p></div></main>
+      <footer>你的游戏，你的翻译服务。<span>取词 · 翻译 · 内嵌</span></footer>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toasts" aria-live="polite" aria-atomic="false"></div>
+  <noscript>请启用 JavaScript 后使用 Rika Translator（梨花翻译工具）。</noscript>
+</body>
+</html>

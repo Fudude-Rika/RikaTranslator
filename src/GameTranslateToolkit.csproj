@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.7.4</Version>
+    <AssemblyName>RikaTranslator</AssemblyName>
+    <RootNamespace>GameTranslateToolkit</RootNamespace>
+    <Title>Rika Translator</Title>
+    <AssemblyTitle>Rika Translator（梨花翻译工具）</AssemblyTitle>
+    <Product>Rika Translator（梨花翻译工具）</Product>
+    <Description>使用自己的 OpenAI 兼容服务翻译游戏。</Description>
+    <ApplicationIcon>wwwroot\assets\rika.ico</ApplicationIcon>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <DefaultItemExcludes>$(DefaultItemExcludes);dist\**;data\**;updater\**;font-fixes\**;tools\**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="AssetsTools.NET"><HintPath>lib\AssetsTools.NET.dll</HintPath><Private>true</Private></Reference>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <EmbeddedResource Include="wwwroot\assets\rika.ico" LogicalName="GameTranslateToolkit.RikaIcon" />
+    <Content Update="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="adapters\**\*" />
+    <Content Include="adapters\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Remove="licenses\**\*" />
+    <Content Include="licenses\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Compile Remove="tests\**\*" />
+    <Content Remove="tests\**\*" />
+    <None Remove="tests\**\*" />
+  </ItemGroup>
+  <Target Name="ExcludeUnusedWpfWebView" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup><Reference Remove="@(Reference)" Condition="'%(Reference.Filename)' == 'Microsoft.Web.WebView2.Wpf'" /></ItemGroup>
+  </Target>
+</Project>
