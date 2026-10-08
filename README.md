@@ -74,3 +74,7 @@ Galgame 取词使用 [LunaTranslator / LunaHook](https://github.com/HIllya51/Lun
 Unity 适配使用 [BepInEx](https://github.com/BepInEx/BepInEx) 与 [XUnity.AutoTranslator](https://github.com/bbepis/XUnity.AutoTranslator)；
 匹配 Unreal 路线使用 [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS)。
 第三方许可证、版权声明及对应源码保存在源码和成品各自的 `licenses`、`adapters/packages` 中。
+
+## 致谢
+
+本仓库的源码整理、文档编写、隐私检查和版本发布由 **OpenAI Codex** 辅助完成。
